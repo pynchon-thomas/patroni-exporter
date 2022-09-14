@@ -83,3 +83,62 @@ enum Names implements Name {
 За структуры
 -----------------------------
 
+ФИО это структура Имя + Фамилия + Отчество
+
+Можно представить так ее использование
+
+```java
+public String report(String lastName, String firstName, String middleName)
+{
+    ... 
+}
+```
+
+В люгкую можно перепутать где что при использовании
+
+    var a = "Ivan"
+    var b = "Petrovich"
+    var c = "Sidorov"
+    report(a,b,c)
+
+Можно сделать такое
+
+```java
+class FIO {
+    String firstName
+    String middleName
+    String lastName
+    FIO(String lastName, String firstName, String middleName) {
+        ....
+    }
+}
+```
+
+Будет работать в таком случае
+
+```java
+FIO fio = db.findById( 10 );
+report( fio );
+```
+
+но не в этом
+
+```java
+FIO fio = new FIO("Ivan", "Petrovich", "Sidorov");
+report( fio );
+```
+
+компилятор не поймает
+
+а вот это уже значитеьно уменьшит вероятность ошибки
+
+```java
+class FIO {
+    FirstName firstName
+    MiddleName middleName
+    LastName lastName
+    FIO(LastName lastName, FirstName firstName, MiddleName middleName) {
+        ....
+    }
+}
+```
