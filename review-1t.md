@@ -142,3 +142,145 @@ class FIO {
     }
 }
 ```
+
+Типизация createKV(String s)
+------------------------------
+
+s - по коду принимает следующие значения:
+
+1. nodeUp
+2. null_nodeUp
+3. members
+4. null_members
+5. leader
+
+имеет смысл создать 5 разных классов/типов: NodeUp, NullNodeUp, Members, NullMembers, Leader
+
+### Пример для NodeUp
+
+Есть вот такой код
+
+```java
+Map<String,String[][]> createKV(String s){
+    Map<String,String[][]> map = new HashMap<>();
+    String[] k;
+    String[] v;
+    String[][] m;
+    switch (s){
+        case "nodeUp":
+            k = new String[3];
+            k[0]="state";
+            k[1]="node_name";
+            k[2]="node";
+
+            v = new String[3];
+
+            m = new String[2][3];
+            m[0]=k;
+            m[1]=v;
+
+            map.put(s,m);
+            break;
+        ...
+    return map;
+}
+```
+
+вот так, в первом приблежении
+
+```java
+public class NodeUp {
+    private static final NO_VALUE = "out of service";
+    public String state = NO_VALUE;
+    public String node_name = NO_VALUE;
+    public String node = NO_VALUE;
+}
+```
+
+сейчас использование так
+
+```java
+public void checkNode() throws ExecutionException {
+    String [] k = createKV("nodeUp").get("nodeUp")[0];
+    String[] v = createKV("nodeUp").get("nodeUp")[1];
+
+    Metrics nodeUp = new Metrics("patroni_node_up");
+
+    try {
+
+        JsonNode jsonNodeCluster = (new ObjectMapper()).readTree(getResp(request_cluster).body());
+        for (JsonNode e : jsonNodeCluster.get("members")) {
+            if (e.get("host").asText().equals(this.node.split("//")[1])) {
+                v[0]=strQuote((e.get("state").asText())); // label for state
+                v[1]=strQuote((e.get("name").asText())); // label for node_name
+                v[2]=strQuote(node.split("//")[1]); // label for node
+            }
+        }
+        nodeUp.setLabels(k,v);
+        nodeUp.setValue("1");
+        collector.add(nodeUp);
+        App.myCache.loadingCache.invalidate("patroni_node_up");
+        App.myCache.loadingCache.get("patroni_node_up");
+
+
+
+    } catch (NullPointerException | JsonProcessingException e) {String[][] m;
+        if(App.myCache.loadingCache.size() >0){
+
+            m = App.myCache.loadingCache.get("patroni_node_up");
+            nodeUp.setLabels(m[0],m[1]);nodeUp.setValue("0");collector.add(nodeUp);}
+        else{m = createKV("null_nodeUp").get("null_nodeUp");nodeUp.setLabels(m[0],m[1]);nodeUp.setValue("0");
+        collector.add(nodeUp);}
+
+    }
+}
+```
+
+а будет вот так
+
+```java
+public void checkNode() throws ExecutionException {
+    Metrics nodeUp = new Metrics("patroni_node_up");
+    var nodeUpData = new NodeUp();
+
+    try {
+        JsonNode jsonNodeCluster = (new ObjectMapper()).readTree(getResp(request_cluster).body());
+        for (JsonNode e : jsonNodeCluster.get("members")) {
+            if (e.get("host").asText().equals(this.node.split("//")[1])) {
+                nodeUpData.state = strQuote((e.get("state").asText()));
+                nodeUpData.node_name = strQuote((e.get("name").asText()));
+                nodeUpData.node = strQuote(node.split("//")[1]);
+            }
+        }
+        // nodeUp.setLabels(k,v);
+        nodeUp.setLabels(
+            new String[]{"state","node_name","node"}, 
+            new String[]{ 
+                nodeUpData.state, 
+                nodeUpData.node_name, 
+                nodeUpData.node
+            }
+        );
+        nodeUp.setValue("1");
+        collector.add(nodeUp);
+        App.myCache.loadingCache.invalidate("patroni_node_up");
+        App.myCache.loadingCache.get("patroni_node_up");
+
+
+
+    } catch (NullPointerException | JsonProcessingException e) {String[][] m;
+        if(App.myCache.loadingCache.size() >0){
+
+            m = App.myCache.loadingCache.get("patroni_node_up");
+            nodeUp.setLabels(m[0],m[1]);nodeUp.setValue("0");collector.add(nodeUp);}
+        else{m = createKV("null_nodeUp").get("null_nodeUp");nodeUp.setLabels(m[0],m[1]);nodeUp.setValue("0");
+        collector.add(nodeUp);}
+
+    }
+}
+```
+
+По идее у тебя должно исчезнуть `createKV`, а ам где используется
+замениться на создание экзмпляра определенного класса NodeUp / Members / Leader 
+
+После можно свести Metrics и упростить его, но это после этого
