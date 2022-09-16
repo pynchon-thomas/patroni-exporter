@@ -1,9 +1,11 @@
+package org.fia;
 import com.google.common.cache.Cache;
 import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 
 
 import java.util.*;
+
 
 public class myCache {
     Collection<Metrics> collector;

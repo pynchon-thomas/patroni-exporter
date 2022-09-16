@@ -1,4 +1,5 @@
 
+package org.fia;
 
 import static spark.Spark.*;
 

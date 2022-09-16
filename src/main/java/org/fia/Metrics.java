@@ -1,3 +1,5 @@
+package org.fia;
+
 import java.util.TreeMap;
 
 public class Metrics {
